@@ -1,0 +1,612 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Global Festivals Countdown</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600;700&display=swap');
+
+        :root {
+            --primary-color: #FF4136;
+            --secondary-color: #0074D9;
+            --background-color: #f4f4f4;
+            --text-color: #333;
+            --card-background: #ffffff;
+            --card-shadow: 0 4px 15px rgba(0,0,0,0.1);
+            --border-radius: 12px;
+            --whatsapp-color: #25D366;
+            --whatsapp-text-color: #fff;
+            --suggestion-hover-bg: #e9e9e9;
+            --country-header-bg: #e0e0e0;
+        }
+
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+
+        body {
+            font-family: 'Poppins', 'Arial', sans-serif;
+            background-color: var(--background-color);
+            color: var(--text-color);
+            line-height: 1.6;
+            overflow-x: hidden;
+        }
+
+        .container { max-width: 1200px; margin: 0 auto; padding: 20px; }
+
+        .page { display: none; min-height: 90vh; animation: fadeIn 0.5s ease-in-out; }
+        .page.active { display: block; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
+
+        #event-list-page header {
+            text-align: center; margin-bottom: 20px;
+            padding: 15px 0;
+            background: linear-gradient(135deg, var(--primary-color), #ff7066);
+            color: white; border-radius: var(--border-radius); box-shadow: var(--card-shadow);
+        }
+        #event-list-page header h1 { font-size: 2.2rem; font-weight: 700; }
+
+        .search-container { margin-bottom: 30px; position: relative; }
+        #search-bar {
+            width: 100%; padding: 12px 20px; font-size: 1.1rem;
+            border: 1px solid #ddd; border-radius: var(--border-radius);
+            box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+        }
+        #search-bar:focus {
+            outline: none; border-color: var(--primary-color);
+            box-shadow: 0 0 0 3px rgba(255, 65, 54, 0.2);
+        }
+        .suggestions-box {
+            position: absolute; top: 100%; left: 0; right: 0;
+            background-color: white; border: 1px solid #ddd; border-top: none;
+            border-radius: 0 0 var(--border-radius) var(--border-radius);
+            box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+            max-height: 300px; overflow-y: auto; z-index: 100; display: none;
+        }
+        .suggestion-item { padding: 10px 20px; cursor: pointer; font-size: 1rem; }
+        .suggestion-item:hover, .suggestion-item.active-suggestion { background-color: var(--suggestion-hover-bg); }
+        .suggestion-item strong { color: var(--primary-color); }
+
+        .country-header {
+            grid-column: 1 / -1; background-color: var(--country-header-bg);
+            color: var(--text-color); padding: 10px 15px; margin-top: 20px;
+            margin-bottom: 10px; font-size: 1.5rem; font-weight: 600;
+            border-radius: var(--border-radius); text-align: center;
+        }
+        .country-header:first-of-type { margin-top: 0; }
+
+        .event-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 25px; }
+        .event-item {
+            background-color: var(--card-background); border-radius: var(--border-radius); padding: 20px;
+            text-align: center; cursor: pointer; transition: transform 0.3s ease, box-shadow 0.3s ease;
+            box-shadow: var(--card-shadow); display: flex; flex-direction: column;
+            align-items: center; justify-content: center; min-height: 150px;
+        }
+        .event-item:hover { transform: translateY(-8px) scale(1.03); box-shadow: 0 10px 25px rgba(0,0,0,0.15); }
+        .event-item .icon { font-size: 2.8rem; margin-bottom: 12px; color: var(--primary-color); transition: color 0.3s ease; }
+        .event-item:hover .icon { color: var(--secondary-color); }
+        .event-item p { font-size: 1.1rem; font-weight: 600; color: var(--text-color); line-height: 1.3; }
+
+        #countdown-page {
+            display: none; flex-direction: column; align-items: center; justify-content: space-between;
+            min-height: 100vh; background-color: var(--primary-color); color: white;
+            padding: 20px; text-align: center; position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%; z-index: 1000; overflow-y: auto;
+        }
+        #countdown-page.active { display: flex !important; }
+
+        #countdown-main-content {
+            margin-top: 60px; /* Space for back button */
+            /* flex-grow: 1; Removed to allow content to naturally flow and push ads down */
+            display: flex;
+            flex-direction: column; align-items: center;
+            /* justify-content: center; Removed for natural flow */
+            width:100%; padding: 10px 0;
+        }
+        #countdown-title {
+            font-size: 2.0rem; margin-bottom: 20px; font-weight: 700;
+            animation: slideInDown 0.5s ease-out; color: white;
+        }
+
+        .timer {
+            display: flex; justify-content: center; gap: 10px; flex-wrap: wrap;
+            animation: zoomIn 0.7s ease-out; margin-bottom: 15px; /* Reduced margin slightly */
+        }
+        .timer div {
+            background-color: rgba(0, 0, 0, 0.2); padding: 12px;
+            border-radius: var(--border-radius); min-width: 90px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+        }
+        .timer span { display: block; font-size: 2.5rem; font-weight: bold; color: white; }
+        .timer p { font-size: 0.9rem; margin-top: 5px; text-transform: uppercase; color: rgba(255,255,255,0.8); }
+
+        .back-button-container { position: absolute; top: 15px; right: 15px; z-index: 10; }
+        .back-button {
+            background-color: rgba(255, 255, 255, 0.2); color: white; border: none;
+            padding: 8px 15px; border-radius: var(--border-radius); cursor: pointer;
+            font-size: 0.9rem; font-family: 'Poppins', 'Arial', sans-serif;
+            transition: background-color 0.3s ease, transform 0.2s ease;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.2); display: flex; align-items: center; gap: 6px;
+        }
+        .back-button:hover { background-color: rgba(255, 255, 255, 0.4); transform: scale(1.05); }
+        .back-button svg { width: 18px; height: 18px; fill: currentColor; }
+
+        .whatsapp-share-container { margin-top: 10px; margin-bottom: 15px; } /* Adjusted margins */
+        .whatsapp-share-button {
+            background-color: var(--whatsapp-color); color: var(--whatsapp-text-color); border: none;
+            padding: 10px 20px; border-radius: var(--border-radius); cursor: pointer;
+            font-size: 1rem; font-family: 'Poppins', 'Arial', sans-serif;
+            transition: background-color 0.3s ease, transform 0.2s ease;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.25); display: inline-flex;
+            align-items: center; gap: 8px; text-decoration: none;
+        }
+        .whatsapp-share-button:hover { background-color: #1EBE57; transform: scale(1.05); }
+        .whatsapp-share-button svg { width: 20px; height: 20px; fill: var(--whatsapp-text-color); }
+
+        /* Ad Area Styles */
+        .ad-area {
+            width: 100%; margin: 15px 0; /* Vertical spacing for each ad area */
+            text-align: center;
+            display: none; /* Initially hidden */
+            /* background-color: rgba(0,0,0,0.1); /* Optional: for visibility during testing */
+            /* border: 1px dashed white; /* Optional: for visibility during testing */
+        }
+        #countdown-page.active .ad-area {
+            display: block; /* Show when countdown page is active */
+        }
+        
+        /* This wrapper is now for the very bottom ads only */
+        .ad-bottom-wrapper {
+            margin-top: 20px; /* Add some space if other content is above */
+            padding-bottom: 10px; width: 100%;
+        }
+        /* Style for the ad slot directly below the countdown/share button */
+        #ad-slot-below-countdown {
+            /* Specific styles if needed, or defaults to .ad-area */
+             margin-top: 20px; /* Space after WhatsApp button */
+        }
+
+
+        .rating-request {
+            text-align: center; margin-top: 40px; padding: 15px;
+            background-color: var(--card-background); border-radius: var(--border-radius);
+            font-size: 1.1rem; color: var(--secondary-color); font-weight: bold; box-shadow: var(--card-shadow);
+        }
+        .hidden { display: none !important; }
+
+        @media (max-width: 768px) {
+            #event-list-page header h1 { font-size: 2rem; }
+            .country-header { font-size: 1.3rem; }
+            .event-grid { grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); }
+            #countdown-title { font-size: 1.8rem; }
+            .timer span { font-size: 2.2rem; }
+            .whatsapp-share-button { font-size: 0.9rem; padding: 8px 15px; }
+        }
+        @media (max-width: 480px) {
+            #event-list-page header h1 { font-size: 1.8rem; }
+            .country-header { font-size: 1.2rem; }
+            .event-grid { grid-template-columns: 1fr; }
+            .event-item p { font-size: 1rem; }
+            #countdown-title { font-size: 1.5rem; margin-bottom: 10px; }
+            .timer { margin-bottom: 15px; }
+            .timer span { font-size: 1.8rem; }
+            .timer div { min-width: 70px; padding: 10px; }
+            .timer p { font-size: 0.7rem; }
+            .whatsapp-share-button { font-size: 0.85rem; padding: 8px 12px; }
+            .whatsapp-share-button svg { width: 18px; height: 18px; }
+        }
+    </style>
+</head>
+<body>
+
+    <div id="event-list-page" class="page active">
+        <div class="container">
+            <header><h1>Global Festivals & Events</h1></header>
+            <div class="search-container">
+                <input type="text" id="search-bar" placeholder="Search for events (e.g., Diwali, Christmas, Pakistan Day)...">
+                <div class="suggestions-box" id="suggestions-box"></div>
+            </div>
+            <div class="event-grid"></div>
+            <div class="rating-request">Enjoying the countdowns? Please rate this tool!</div>
+        </div>
+    </div>
+
+    <div id="countdown-page" class="page">
+        <div class="back-button-container">
+            <button class="back-button" id="back-to-list">
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor"><path d="M10.8284 12.0007L15.7782 16.9504L14.364 18.3646L8 12.0007L14.364 5.63672L15.7782 7.05093L10.8284 12.0007Z"></path></svg>
+                Back
+            </button>
+        </div>
+
+        <div id="countdown-main-content">
+            <h2 id="countdown-title"></h2>
+            <div class="timer">
+                <div><span id="days">00</span><p>Days</p></div>
+                <div><span id="hours">00</span><p>Hours</p></div>
+                <div><span id="minutes">00</span><p>Minutes</p></div>
+                <div><span id="seconds">00</span><p>Seconds</p></div>
+            </div>
+            <div class="whatsapp-share-container">
+                <button class="whatsapp-share-button" id="share-whatsapp-main">
+                    <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M19.228 14.911C18.973 14.034 17.813 13.443 17.333 13.252C16.852 13.062 16.655 12.987 16.335 13.307C16.015 13.627 15.336 14.382 15.101 14.627C14.866 14.872 14.631 14.895 14.236 14.729C13.841 14.563 12.864 14.237 11.696 13.188C10.788 12.381 10.182 11.423 9.992 11.093C9.802 10.763 9.95601 10.597 10.122 10.431C10.271 10.282 10.461 10.014 10.651 9.789C10.841 9.564 10.916 9.386 11.009 9.161C11.102 8.93601 11.027 8.73801 10.917 8.52301C10.807 8.30801 10.153 6.63401 9.88301 6.01901C9.61301 5.40401 9.34801 5.48601 9.16801 5.47801C8.98801 5.47001 8.76301 5.47001 8.53801 5.47001C8.31301 5.47001 7.99301 5.54501 7.72301 5.81501C7.45301 6.08501 6.72601 6.73001 6.72601 7.89701C6.72601 9.06401 7.74601 10.186 7.89601 10.366C8.04601 10.546 10.123 13.719 13.299 15.06C16.475 16.401 16.475 15.921 16.932 15.876C17.389 15.831 18.449 15.263 18.662 14.729C18.875 14.195 18.875 13.754 18.802 13.627C18.729 13.499 18.529 13.424 18.259 13.259C17.989 13.094 19.483 15.788 19.228 14.911Z" fill-rule="evenodd" clip-rule="evenodd"></path><path d="M12.001 2.00234C6.47851 2.00234 2.00146 6.47938 2.00146 12.0019C2.00146 17.5244 6.47851 22.0014 12.001 22.0014C17.5235 22.0014 22.0005 17.5244 22.0005 12.0019C22.0005 6.47938 17.5235 2.00234 12.001 2.00234ZM12.001 20.3454C7.39151 20.3454 3.65746 16.6114 3.65746 12.0019C3.65746 7.39238 7.39151 3.65834 12.001 3.65834C16.6105 3.65834 20.3445 7.39238 20.3445 12.0019C20.3445 16.6114 16.6105 20.3454 12.001 20.3454Z" fill-rule="evenodd" clip-rule="evenodd"></path></svg>
+                    Share on WhatsApp
+                </button>
+            </div>
+
+            <!-- Ad slot below countdown timer and WhatsApp button -->
+            <div class="ad-area" id="ad-slot-below-countdown">
+                <script type="text/javascript">
+                    atOptions = {
+                        'key' : '1c984e0d05b70b660c8f5085d495b10f',
+                        'format' : 'iframe',
+                        'height' : 90,
+                        'width' : 728,
+                        'params' : {}
+                    };
+                </script>
+                <script type="text/javascript" src="//www.highperformanceformat.com/1c984e0d05b70b660c8f5085d495b10f/invoke.js"></script>
+            </div>
+        </div>
+
+
+        <div class="ad-bottom-wrapper">
+            <!-- These are the original two bottom ad slots. You can keep them or remove if you only want one ad after countdown -->
+            <div class="ad-area" id="ad-area-1">
+                <!-- ADS SCRIPT HERE (for another ad if needed, or remove this div) -->
+            </div>
+            <div class="ad-area" id="ad-area-2">
+                <!-- ADS SCRIPT HERE (for another ad if needed, or remove this div) -->
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const countryOrder = [
+            "Pakistan", "India", "United States (USA)", "United Kingdom", "China", 
+            "Saudi Arabia", "Japan", "France", "Brazil", "Australia"
+        ];
+
+        const allEventsData = [
+            // 1. Pakistan
+            { id: 'pk-pakistan-day', country: 'Pakistan', name: 'Pakistan Day', date: '2025-03-23T00:00:00', icon: '🇵🇰' },
+            { id: 'pk-independence-day', country: 'Pakistan', name: 'Independence Day', date: '2024-08-14T00:00:00', icon: '🇵🇰🎉' },
+            { id: 'pk-eid-fitr', country: 'Pakistan', name: 'Eid-ul-Fitr', date: '2025-03-30T00:00:00', icon: '🌙' },
+            { id: 'pk-eid-adha', country: 'Pakistan', name: 'Eid-ul-Adha', date: '2025-06-07T00:00:00', icon: '🐑' },
+            { id: 'pk-ashura', country: 'Pakistan', name: 'Ashura (10th Muharram)', date: '2024-07-17T00:00:00', icon: '🕌' },
+            { id: 'pk-quaid-day', country: 'Pakistan', name: 'Quaid-e-Azam Day', date: '2024-12-25T00:00:00', icon: '👤' },
+            { id: 'pk-defence-day', country: 'Pakistan', name: 'Defence Day', date: '2024-09-06T00:00:00', icon: '🛡️' },
+            { id: 'pk-labour-day', country: 'Pakistan', name: 'Labour Day', date: '2025-05-01T00:00:00', icon: '🛠️' },
+            { id: 'pk-basant', country: 'Pakistan', name: 'Basant Festival', date: '2025-02-15T00:00:00', icon: '🪁' },
+            { id: 'pk-urs-data-ganj', country: 'Pakistan', name: 'Urs of Data Ganj Bakhsh', date: '2024-09-20T00:00:00', icon: '🕌✨' },
+
+            // 2. India
+            { id: 'in-diwali', country: 'India', name: 'Diwali', date: '2024-11-01T00:00:00', icon: '🪔' },
+            { id: 'in-holi', country: 'India', name: 'Holi', date: '2025-03-14T00:00:00', icon: '🎨' },
+            { id: 'in-eid-fitr', country: 'India', name: 'Eid-ul-Fitr', date: '2025-03-30T00:00:00', icon: '🌙🇮🇳' },
+            { id: 'in-eid-adha', country: 'India', name: 'Eid-ul-Adha', date: '2025-06-07T00:00:00', icon: '🐑🇮🇳' },
+            { id: 'in-navratri', country: 'India', name: 'Navratri', date: '2024-10-03T00:00:00', icon: '💃' },
+            { id: 'in-durga-puja', country: 'India', name: 'Durga Puja', date: '2024-10-09T00:00:00', icon: '🌺' },
+            { id: 'in-raksha-bandhan', country: 'India', name: 'Raksha Bandhan', date: '2024-08-19T00:00:00', icon: '💖' },
+            { id: 'in-independence-day', country: 'India', name: 'Independence Day', date: '2024-08-15T00:00:00', icon: '🇮🇳🎉' },
+            { id: 'in-republic-day', country: 'India', name: 'Republic Day', date: '2025-01-26T00:00:00', icon: '🇮🇳' },
+            { id: 'in-janmashtami', country: 'India', name: 'Janmashtami', date: '2024-08-26T00:00:00', icon: '👶🏽' },
+
+            // 3. United States (USA)
+            { id: 'us-independence-day', country: 'United States (USA)', name: 'Independence Day (4th July)', date: '2025-07-04T00:00:00', icon: '🇺🇸🎆' },
+            { id: 'us-thanksgiving', country: 'United States (USA)', name: 'Thanksgiving Day', date: '2024-11-28T00:00:00', icon: '🦃' },
+            { id: 'us-halloween', country: 'United States (USA)', name: 'Halloween', date: '2024-10-31T00:00:00', icon: '🎃' },
+            { id: 'us-christmas', country: 'United States (USA)', name: 'Christmas', date: '2024-12-25T00:00:00', icon: '🎄' },
+            { id: 'us-new-year', country: 'United States (USA)', name: 'New Year’s Day', date: '2025-01-01T00:00:00', icon: '🎉' },
+            { id: 'us-memorial-day', country: 'United States (USA)', name: 'Memorial Day', date: '2025-05-26T00:00:00', icon: '🇺🇸🎖️' },
+            { id: 'us-labor-day', country: 'United States (USA)', name: 'Labor Day', date: '2024-09-02T00:00:00', icon: '🛠️🇺🇸' },
+            { id: 'us-mlk-day', country: 'United States (USA)', name: 'Martin Luther King Jr. Day', date: '2025-01-20T00:00:00', icon: '🧑🏾‍🏫' },
+            { id: 'us-veterans-day', country: 'United States (USA)', name: 'Veterans Day', date: '2024-11-11T00:00:00', icon: '🇺🇸🛡️' },
+            { id: 'us-easter', country: 'United States (USA)', name: 'Easter', date: '2025-04-20T00:00:00', icon: '🐇' },
+
+            // 4. United Kingdom
+            { id: 'uk-christmas', country: 'United Kingdom', name: 'Christmas', date: '2024-12-25T00:00:00', icon: '🎄🇬🇧' },
+            { id: 'uk-easter', country: 'United Kingdom', name: 'Easter', date: '2025-04-20T00:00:00', icon: '🐇🇬🇧' },
+            { id: 'uk-new-year', country: 'United Kingdom', name: 'New Year’s Day', date: '2025-01-01T00:00:00', icon: '🎉🇬🇧' },
+            { id: 'uk-guy-fawkes', country: 'United Kingdom', name: 'Guy Fawkes Night', date: '2024-11-05T00:00:00', icon: '🎆' },
+            { id: 'uk-remembrance-day', country: 'United Kingdom', name: 'Remembrance Day', date: '2024-11-11T00:00:00', icon: '🌺🇬🇧' },
+            { id: 'uk-st-george', country: 'United Kingdom', name: 'St. George’s Day', date: '2025-04-23T00:00:00', icon: '🏴󠁧󠁢󠁥󠁮󠁧󠁿' },
+            { id: 'uk-may-day', country: 'United Kingdom', name: 'May Day', date: '2025-05-05T00:00:00', icon: '🌸' },
+            { id: 'uk-halloween', country: 'United Kingdom', name: 'Halloween', date: '2024-10-31T00:00:00', icon: '🎃🇬🇧' },
+            { id: 'uk-mothers-day', country: 'United Kingdom', name: 'Mother’s Day', date: '2025-03-30T00:00:00', icon: '💐' },
+            { id: 'uk-boxing-day', country: 'United Kingdom', name: 'Boxing Day', date: '2024-12-26T00:00:00', icon: '🎁' },
+
+            // 5. China
+            { id: 'cn-chinese-new-year', country: 'China', name: 'Chinese New Year (Spring Festival)', date: '2025-01-29T00:00:00', icon: '🐉' },
+            { id: 'cn-lantern-festival', country: 'China', name: 'Lantern Festival', date: '2025-02-12T00:00:00', icon: '🏮' },
+            { id: 'cn-qingming', country: 'China', name: 'Qingming Festival', date: '2025-04-04T00:00:00', icon: '🌬️' },
+            { id: 'cn-dragon-boat', country: 'China', name: 'Dragon Boat Festival', date: '2025-05-31T00:00:00', icon: '🛶' },
+            { id: 'cn-mid-autumn', country: 'China', name: 'Mid-Autumn Festival', date: '2024-09-17T00:00:00', icon: '🥮' },
+            { id: 'cn-national-day', country: 'China', name: 'National Day (1st October)', date: '2024-10-01T00:00:00', icon: '🇨🇳🎉' },
+            { id: 'cn-double-ninth', country: 'China', name: 'Double Ninth Festival', date: '2024-10-11T00:00:00', icon: '🏞️' },
+            { id: 'cn-labour-day', country: 'China', name: 'Labour Day (1st May)', date: '2025-05-01T00:00:00', icon: '🛠️🇨🇳' },
+            { id: 'cn-ghost-festival', country: 'China', name: 'Ghost Festival', date: '2024-08-18T00:00:00', icon: '👻' },
+            { id: 'cn-laba-festival', country: 'China', name: 'Laba Festival', date: '2025-01-07T00:00:00', icon: '🥣' },
+
+            // 6. Saudi Arabia
+            { id: 'sa-eid-fitr', country: 'Saudi Arabia', name: 'Eid-ul-Fitr', date: '2025-03-30T00:00:00', icon: '🌙🇸🇦' },
+            { id: 'sa-eid-adha', country: 'Saudi Arabia', name: 'Eid-ul-Adha', date: '2025-06-07T00:00:00', icon: '🐑🇸🇦' },
+            { id: 'sa-national-day', country: 'Saudi Arabia', name: 'Saudi National Day (23rd September)', date: '2024-09-23T00:00:00', icon: '🇸🇦🎉' },
+            { id: 'sa-hajj-season', country: 'Saudi Arabia', name: 'Hajj Season', date: '2025-06-05T00:00:00', icon: '🕋' },
+            { id: 'sa-founding-day', country: 'Saudi Arabia', name: 'Founding Day (22nd February)', date: '2025-02-22T00:00:00', icon: '🇸🇦🏛️' },
+            { id: 'sa-gargeean', country: 'Saudi Arabia', name: 'Gargee’an', date: '2025-03-15T00:00:00', icon: '🍬' },
+            { id: 'sa-ramadan-start', country: 'Saudi Arabia', name: 'Ramadan', date: '2025-02-28T00:00:00', icon: '☪️' },
+            { id: 'sa-mawlid', country: 'Saudi Arabia', name: 'Mawlid al-Nabi', date: '2024-09-15T00:00:00', icon: '🕌🇸🇦' },
+            { id: 'sa-ashura-sa', country: 'Saudi Arabia', name: 'Ashura', date: '2024-07-17T00:00:00', icon: '🤲' },
+            { id: 'sa-book-fair', country: 'Saudi Arabia', name: 'International Book Fair (Riyadh)', date: '2024-09-28T00:00:00', icon: '📚' },
+
+            // 7. Japan
+            { id: 'jp-new-year', country: 'Japan', name: 'New Year (Shogatsu)', date: '2025-01-01T00:00:00', icon: '🇯🇵🎉' },
+            { id: 'jp-cherry-blossom', country: 'Japan', name: 'Cherry Blossom Festival (Hanami)', date: '2025-03-28T00:00:00', icon: '🌸' },
+            { id: 'jp-golden-week-start', country: 'Japan', name: 'Golden Week', date: '2025-04-29T00:00:00', icon: '🌟' },
+            { id: 'jp-childrens-day', country: 'Japan', name: 'Children’s Day', date: '2025-05-05T00:00:00', icon: '🎏' },
+            { id: 'jp-tanabata', country: 'Japan', name: 'Tanabata Festival', date: '2025-07-07T00:00:00', icon: '🎋' },
+            { id: 'jp-obon-festival', country: 'Japan', name: 'Obon Festival', date: '2024-08-13T00:00:00', icon: '🏮🇯🇵' },
+            { id: 'jp-coming-of-age', country: 'Japan', name: 'Coming of Age Day', date: '2025-01-13T00:00:00', icon: '🧑‍🎓' },
+            { id: 'jp-respect-aged', country: 'Japan', name: 'Respect for the Aged Day', date: '2024-09-16T00:00:00', icon: '👵👴' },
+            { id: 'jp-emperor-birthday', country: 'Japan', name: 'Emperor’s Birthday', date: '2025-02-23T00:00:00', icon: '👑🇯🇵' },
+            { id: 'jp-setsubun', country: 'Japan', name: 'Setsubun (Bean-Throwing Festival)', date: '2025-02-03T00:00:00', icon: '👹' },
+
+            // 8. France
+            { id: 'fr-bastille-day', country: 'France', name: 'Bastille Day (14th July)', date: '2025-07-14T00:00:00', icon: '🇫🇷🎆' },
+            { id: 'fr-christmas', country: 'France', name: 'Christmas', date: '2024-12-25T00:00:00', icon: '🎄🇫🇷' },
+            { id: 'fr-easter', country: 'France', name: 'Easter', date: '2025-04-20T00:00:00', icon: '🐇🇫🇷' },
+            { id: 'fr-armistice-day', country: 'France', name: 'Armistice Day (11th November)', date: '2024-11-11T00:00:00', icon: '🌺🇫🇷' },
+            { id: 'fr-labor-day', country: 'France', name: 'Labor Day (1st May)', date: '2025-05-01T00:00:00', icon: '🛠️🇫🇷' },
+            { id: 'fr-ve-day', country: 'France', name: 'Victory in Europe Day (8th May)', date: '2025-05-08T00:00:00', icon: '🕊️' },
+            { id: 'fr-all-saints', country: 'France', name: 'All Saints’ Day', date: '2024-11-01T00:00:00', icon: '⛪' },
+            { id: 'fr-assumption-day', country: 'France', name: 'Assumption Day', date: '2024-08-15T00:00:00', icon: '🙏' },
+            { id: 'fr-music-festival', country: 'France', name: 'National Music Festival', date: '2025-06-21T00:00:00', icon: '🎶' },
+            { id: 'fr-cannes-festival', country: 'France', name: 'Cannes Film Festival', date: '2025-05-13T00:00:00', icon: '🎬' },
+
+            // 9. Brazil
+            { id: 'br-carnival', country: 'Brazil', name: 'Carnival', date: '2025-02-28T00:00:00', icon: '🎭' },
+            { id: 'br-independence-day', country: 'Brazil', name: 'Independence Day (7th September)', date: '2024-09-07T00:00:00', icon: '🇧🇷🎉' },
+            { id: 'br-tiradentes-day', country: 'Brazil', name: 'Tiradentes Day', date: '2025-04-21T00:00:00', icon: '🦷' },
+            { id: 'br-republic-day', country: 'Brazil', name: 'Republic Day (15th November)', date: '2024-11-15T00:00:00', icon: '🇧🇷🏛️' },
+            { id: 'br-christmas', country: 'Brazil', name: 'Christmas', date: '2024-12-25T00:00:00', icon: '🎄🇧🇷' },
+            { id: 'br-easter-br', country: 'Brazil', name: 'Easter', date: '2025-04-20T00:00:00', icon: '🐇🇧🇷' },
+            { id: 'br-good-friday', country: 'Brazil', name: 'Good Friday', date: '2025-04-18T00:00:00', icon: '✝️' },
+            { id: 'br-our-lady-aparecida', country: 'Brazil', name: 'Our Lady of Aparecida Day', date: '2024-10-12T00:00:00', icon: '🙏🇧🇷' },
+            { id: 'br-new-year-eve', country: 'Brazil', name: 'New Year’s Eve (Reveillon)', date: '2024-12-31T00:00:00', icon: '🎆🇧🇷' },
+            { id: 'br-sao-joao', country: 'Brazil', name: 'São João Festival', date: '2025-06-24T00:00:00', icon: '🔥' },
+
+            // 10. Australia
+            { id: 'au-australia-day', country: 'Australia', name: 'Australia Day (26th January)', date: '2025-01-26T00:00:00', icon: '🇦🇺🎉' },
+            { id: 'au-anzac-day', country: 'Australia', name: 'Anzac Day (25th April)', date: '2025-04-25T00:00:00', icon: '🌺🇦🇺' },
+            { id: 'au-christmas', country: 'Australia', name: 'Christmas', date: '2024-12-25T00:00:00', icon: '🎄🇦🇺' },
+            { id: 'au-easter-au', country: 'Australia', name: 'Easter', date: '2025-04-20T00:00:00', icon: '🐇🇦🇺' },
+            { id: 'au-labour-day', country: 'Australia', name: 'Labour Day', date: '2025-03-10T00:00:00', icon: '🛠️🇦🇺' },
+            { id: 'au-new-year', country: 'Australia', name: 'New Year’s Day', date: '2025-01-01T00:00:00', icon: '🎉🇦🇺' },
+            { id: 'au-queen-birthday', country: 'Australia', name: 'Queen’s Birthday', date: '2025-06-09T00:00:00', icon: '👑🇦🇺' },
+            { id: 'au-melbourne-cup', country: 'Australia', name: 'Melbourne Cup Day', date: '2024-11-05T00:00:00', icon: '🏇' },
+            { id: 'au-national-sorry-day', country: 'Australia', name: 'National Sorry Day', date: '2025-05-26T00:00:00', icon: '🤝' },
+            { id: 'au-naidoc-week', country: 'Australia', name: 'NAIDOC Week', date: '2025-07-06T00:00:00', icon: '🖤💛❤️' } 
+        ];
+
+        const eventListPage = document.getElementById('event-list-page');
+        const countdownPage = document.getElementById('countdown-page');
+        const eventGrid = document.querySelector('.event-grid');
+        const countdownTitleEl = document.getElementById('countdown-title');
+        const daysEl = document.getElementById('days');
+        const hoursEl = document.getElementById('hours');
+        const minutesEl = document.getElementById('minutes');
+        const secondsEl = document.getElementById('seconds');
+        const backButton = document.getElementById('back-to-list');
+        const mainShareWhatsAppButton = document.getElementById('share-whatsapp-main');
+        const timerDisplay = document.querySelector('.timer');
+        const searchBar = document.getElementById('search-bar');
+        const suggestionsBox = document.getElementById('suggestions-box');
+        
+        let countdownInterval;
+        let currentEventData = null;
+        let activeSuggestionIndex = -1;
+
+        function populateEventList(filterText = '') {
+            eventGrid.innerHTML = '';
+            const eventsToDisplay = filterText 
+                ? allEventsData.filter(event => event.name.toLowerCase().includes(filterText.toLowerCase()) || event.country.toLowerCase().includes(filterText.toLowerCase()))
+                : allEventsData;
+
+            if (eventsToDisplay.length === 0 && filterText) {
+                eventGrid.innerHTML = '<p style="text-align:center; grid-column: 1 / -1; color: #777; font-size: 1.2rem;">No events found matching your search.</p>';
+                return;
+            }
+
+            if (!filterText) {
+                countryOrder.forEach(countryName => {
+                    const eventsInCountry = eventsToDisplay.filter(event => event.country === countryName);
+                    if (eventsInCountry.length > 0) {
+                        const countryHeader = document.createElement('div');
+                        countryHeader.classList.add('country-header');
+                        countryHeader.textContent = countryName;
+                        eventGrid.appendChild(countryHeader);
+                        eventsInCountry.forEach(event => createEventItem(event));
+                    }
+                });
+            } else { 
+                eventsToDisplay.forEach(event => createEventItem(event));
+            }
+        }
+        
+        function createEventItem(event) {
+            const item = document.createElement('div');
+            item.classList.add('event-item');
+            item.dataset.eventId = event.id;
+            const iconEl = document.createElement('div');
+            iconEl.classList.add('icon');
+            iconEl.textContent = event.icon || '📅'; 
+            const nameEl = document.createElement('p');
+            nameEl.textContent = event.name; 
+            item.appendChild(iconEl); item.appendChild(nameEl);
+            item.addEventListener('click', () => showCountdownPage(event.id));
+            eventGrid.appendChild(item);
+        }
+
+        function showSuggestions(inputValue) {
+            suggestionsBox.innerHTML = '';
+            if (!inputValue) {
+                suggestionsBox.style.display = 'none';
+                return;
+            }
+            const matchedEvents = allEventsData.filter(event => 
+                event.name.toLowerCase().includes(inputValue.toLowerCase()) || 
+                event.country.toLowerCase().includes(inputValue.toLowerCase())
+            ).slice(0, 7);
+
+            if (matchedEvents.length > 0) {
+                matchedEvents.forEach(event => {
+                    const suggestionItem = document.createElement('div');
+                    suggestionItem.classList.add('suggestion-item');
+                    const displayName = `${event.name} (${event.country})`;
+                    const regex = new RegExp(`(${inputValue.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')})`, 'gi');
+                    suggestionItem.innerHTML = displayName.replace(regex, '<strong>$1</strong>');
+                    suggestionItem.addEventListener('click', () => {
+                        searchBar.value = displayName;
+                        suggestionsBox.style.display = 'none';
+                        populateEventList(event.name);
+                    });
+                    suggestionsBox.appendChild(suggestionItem);
+                });
+                suggestionsBox.style.display = 'block'; activeSuggestionIndex = -1;
+            } else {
+                suggestionsBox.style.display = 'none';
+            }
+        }
+        
+        searchBar.addEventListener('input', (e) => {
+            const searchText = e.target.value;
+            populateEventList(searchText); showSuggestions(searchText);
+        });
+
+        searchBar.addEventListener('keydown', (e) => {
+            const items = suggestionsBox.querySelectorAll('.suggestion-item');
+            if (suggestionsBox.style.display === 'block' && items.length > 0) {
+                if (e.key === 'ArrowDown') {
+                    e.preventDefault(); activeSuggestionIndex = (activeSuggestionIndex + 1) % items.length;
+                    updateActiveSuggestion(items);
+                } else if (e.key === 'ArrowUp') {
+                    e.preventDefault(); activeSuggestionIndex = (activeSuggestionIndex - 1 + items.length) % items.length;
+                    updateActiveSuggestion(items);
+                } else if (e.key === 'Enter' && activeSuggestionIndex > -1) {
+                    e.preventDefault(); items[activeSuggestionIndex].click();
+                    suggestionsBox.style.display = 'none';
+                } else if (e.key === 'Escape') {
+                    suggestionsBox.style.display = 'none';
+                }
+            } else if (e.key === 'Enter' && searchBar.value) {
+                populateEventList(searchBar.value); suggestionsBox.style.display = 'none';
+            }
+        });
+
+        function updateActiveSuggestion(items) {
+            items.forEach(item => item.classList.remove('active-suggestion'));
+            if (activeSuggestionIndex > -1) {
+                items[activeSuggestionIndex].classList.add('active-suggestion');
+                items[activeSuggestionIndex].scrollIntoView({ block: 'nearest', inline: 'nearest' });
+            }
+        }
+
+        document.addEventListener('click', (e) => {
+            if (!searchBar.contains(e.target) && !suggestionsBox.contains(e.target)) {
+                suggestionsBox.style.display = 'none';
+            }
+        });
+        
+        function getEffectiveEventDetails(event) {
+            let effectiveDate = new Date(event.date);
+            const now = new Date();
+            let displayYear = effectiveDate.getFullYear();
+            const originalEventDate = new Date(event.date); 
+            if (originalEventDate.getTime() < now.getTime()) {
+                let tempNextDate = new Date(originalEventDate); 
+                while(tempNextDate.getTime() < now.getTime()){
+                    tempNextDate.setFullYear(tempNextDate.getFullYear() + 1);
+                }
+                effectiveDate = tempNextDate; displayYear = effectiveDate.getFullYear();
+            } else {
+                effectiveDate = originalEventDate; displayYear = effectiveDate.getFullYear();
+            }
+            return {
+                date: effectiveDate,
+                title: `${event.name} (${event.country}) ${displayYear} Countdown`,
+            };
+        }
+
+        function showCountdownPage(eventId) {
+            currentEventData = allEventsData.find(e => e.id === eventId);
+            if (!currentEventData) return;
+            const effectiveDetails = getEffectiveEventDetails(currentEventData);
+            countdownTitleEl.textContent = effectiveDetails.title;
+            startCountdown(effectiveDetails.date.toISOString(), currentEventData.name, currentEventData.country, effectiveDetails.date.getFullYear());
+            window.location.hash = currentEventData.id;
+            eventListPage.classList.remove('active'); countdownPage.classList.add('active');
+            searchBar.value = ''; suggestionsBox.style.display = 'none';
+        }
+
+        function startCountdown(targetDateString, baseEventName, eventCountry, currentCountdownYear) {
+            clearInterval(countdownInterval); 
+            const targetDate = new Date(targetDateString).getTime();
+            function updateTimer() {
+                const now = new Date().getTime();
+                const distance = targetDate - now;
+                if (distance < 0) {
+                    clearInterval(countdownInterval);
+                    let nextOccurrenceDate = new Date(targetDateString); 
+                    nextOccurrenceDate.setFullYear(nextOccurrenceDate.getFullYear() + 1);
+                    const nextYearForTitle = nextOccurrenceDate.getFullYear();
+                    countdownTitleEl.textContent = `${baseEventName} (${eventCountry}) ${nextYearForTitle} Countdown`;
+                    startCountdown(nextOccurrenceDate.toISOString(), baseEventName, eventCountry, nextYearForTitle);
+                    return;
+                }
+                timerDisplay.style.display = 'flex';
+                daysEl.textContent = String(Math.floor(distance / (1000 * 60 * 60 * 24))).padStart(2, '0');
+                hoursEl.textContent = String(Math.floor((distance % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60))).padStart(2, '0');
+                minutesEl.textContent = String(Math.floor((distance % (1000 * 60 * 60)) / (1000 * 60))).padStart(2, '0');
+                secondsEl.textContent = String(Math.floor((distance % (1000 * 60)) / 1000)).padStart(2, '0');
+            }
+            updateTimer(); countdownInterval = setInterval(updateTimer, 1000);
+        }
+
+        backButton.addEventListener('click', () => {
+            clearInterval(countdownInterval); window.location.hash = ''; 
+            currentEventData = null; countdownPage.classList.remove('active');
+            eventListPage.classList.add('active'); populateEventList(); 
+            searchBar.value = ''; suggestionsBox.style.display = 'none'; 
+        });
+
+        mainShareWhatsAppButton.addEventListener('click', () => {
+            if (!currentEventData) return;
+            const days = daysEl.textContent; const hours = hoursEl.textContent; const minutes = minutesEl.textContent;
+            let timeLeftString = `Only ${days} days, ${hours} hours, and ${minutes} minutes left! ⏳`;
+            if (days === "00" && hours === "00" && minutes === "00" && parseInt(secondsEl.textContent) < 10 ) {
+                 timeLeftString = "The event is starting very soon! 🎉";
+            }
+            const currentDisplayTitle = countdownTitleEl.textContent.replace(' Countdown', '');
+            const pageUrl = window.location.origin + window.location.pathname + '#' + currentEventData.id;
+            const message = `🎉 Counting down to *${currentDisplayTitle}*!\n\n${timeLeftString}\n\nCheck it out live: ${pageUrl}`;
+            const whatsappUrl = `https://api.whatsapp.com/send?text=${encodeURIComponent(message)}`;
+            window.open(whatsappUrl, '_blank');
+        });
+        
+        window.addEventListener('DOMContentLoaded', () => {
+            populateEventList(); 
+            const hash = window.location.hash.substring(1); 
+            if (hash) {
+                const eventExists = allEventsData.some(e => e.id === hash);
+                if (eventExists) {
+                    showCountdownPage(hash);
+                } else {
+                    eventListPage.classList.add('active'); 
+                }
+            } else {
+                eventListPage.classList.add('active'); 
+            }
+        });
+    </script>
+</body>
+</html>
